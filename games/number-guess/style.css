@@ -1,0 +1,38 @@
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  transition: background 0.3s;
+}
+
+body.user-turn { background: #87CEEB; }
+body.bot-turn  { background: #90EE90; }
+
+.game-container {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  text-align: center;
+  width: 320px;
+}
+
+select, input, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.info-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.result-text {
+  font-size: 18px;
+  margin-top: 15px;
+}
+
