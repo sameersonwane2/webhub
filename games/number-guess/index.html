@@ -194,9 +194,9 @@ document.getElementById("guessBtn").onclick = () => {
     scoreText.textContent = score;
     clearInterval(timer);
   } else if (val > secretNumber) {
-    msg.textContent = "📉 Too High!";
+    msg.textContent = "📈 Too High!";
   } else {
-    msg.textContent = "📈 Too Low!";
+    msg.textContent = "📉 Too Low!";
   }
 
   attemptsText.textContent = `Attempts left: ${attempts}`;
