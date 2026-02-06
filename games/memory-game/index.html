@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Memory Game | WebHub</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+
+body {
+  min-height: 100vh;
+  background: #020617;
+  color: #e5e7eb;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 480px;
+  padding: 16px;
+  text-align: center;
+}
+
+h1 { color: #22c55e; margin-bottom: 10px; }
+
+select, button {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+select {
+  background: #020617;
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+button {
+  background: #22c55e;
+  color: #022c22;
+  cursor: pointer;
+}
+
+button:hover { background: #16a34a; }
+
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 12px 0;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.game {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.card {
+  background: #020617;
+  border-radius: 12px;
+  height: 70px;
+  cursor: pointer;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.4s;
+  box-shadow: 0 0 15px rgba(34,197,94,0.25);
+}
+
+.card.flip { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  font-size: 30px;
+}
+
+.front {
+  background: #22c55e;
+  color: #022c22;
+  transform: rotateY(180deg);
+  border-radius: 12px;
+}
+
+.back {
+  background: #020617;
+  color: #22c55e;
+  border-radius: 12px;
+}
+
+.status {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>🧠 Memory Game</h1>
+
+  <select id="mode">
+    <option value="normal">Normal Mode</option>
+    <option value="daily">🗓️ Daily Challenge</option>
+  </select>
+
+  <select id="level">
+    <option value="easy">Easy (4×4)</option>
+    <option value="medium" disabled>Medium 🔒</option>
+    <option value="hard" disabled>Hard 🔒</option>
+  </select>
+
+  <div class="stats">
+    <span>⏱ <b id="time">0</b>s</span>
+    <span id="bestLabel">🏆 Best: <b id="best">—</b></span>
+  </div>
+
+  <div class="game" id="game"></div>
+
+  <button onclick="startGame()">Start</button>
+  <div class="status" id="status">Choose mode & start</div>
+</div>
+
+<script>
+const symbolsAll = ["🍎","🍌","🍇","🍓","🍒","🥝","🍍","🍉","🥥","🍑","🍋","🍊"];
+let first=null, second=null, lock=false;
+let timer=0, interval, matches=0, totalPairs=0;
+let dailyMode=false;
+
+const game = document.getElementById("game");
+const timeText = document.getElementById("time");
+const bestText = document.getElementById("best");
+const statusText = document.getElementById("status");
+const levelSelect = document.getElementById("level");
+const modeSelect = document.getElementById("mode");
+const bestLabel = document.getElementById("bestLabel");
+
+function todayKey() {
+  const d = new Date();
+  return d.toISOString().split("T")[0];
+}
+
+function seededShuffle(arr, seed) {
+  let i = arr.length;
+  while (i) {
+    seed = (seed * 9301 + 49297) % 233280;
+    let j = Math.floor((seed / 233280) * i--);
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startGame() {
+  clearInterval(interval);
+  timer = 0;
+  matches = 0;
+  timeText.textContent = 0;
+
+  dailyMode = modeSelect.value === "daily";
+  let level = levelSelect.value;
+
+  if (dailyMode) {
+    level = "easy";
+    levelSelect.disabled = true;
+    bestLabel.textContent = "🗓️ Today";
+    const done = localStorage.getItem("daily-" + todayKey());
+    if (done) {
+      statusText.textContent = "✅ Today's challenge completed!";
+      return;
+    }
+  } else {
+    levelSelect.disabled = false;
+    bestLabel.textContent = "🏆 Best:";
+  }
+
+  let cols = 4, pairs = 8;
+  if (level === "medium") { cols = 5; pairs = 10; }
+  if (level === "hard") { cols = 6; pairs = 12; }
+
+  totalPairs = pairs;
+  game.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  game.innerHTML = "";
+
+  let symbols = symbolsAll.slice(0, pairs);
+  let cards = [...symbols, ...symbols];
+
+  if (dailyMode) {
+    cards = seededShuffle(cards, Number(todayKey().replaceAll("-", "")));
+  } else {
+    cards.sort(() => Math.random() - 0.5);
+  }
+
+  cards.forEach(sym => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="card-face front">${sym}</div>
+      <div class="card-face back">❓</div>`;
+    card.onclick = () => flip(card, sym);
+    game.appendChild(card);
+  });
+
+  interval = setInterval(() => {
+    timer++;
+    timeText.textContent = timer;
+  }, 1000);
+
+  statusText.textContent = "Find all pairs!";
+}
+
+function flip(card, sym) {
+  if (lock || card === first || card.classList.contains("flip")) return;
+  card.classList.add("flip");
+
+  if (!first) { first = {card, sym}; return; }
+
+  second = {card, sym};
+  lock = true;
+
+  if (first.sym === second.sym) {
+    matches++;
+    resetTurn();
+    if (matches === totalPairs) win();
+  } else {
+    setTimeout(() => {
+      first.card.classList.remove("flip");
+      second.card.classList.remove("flip");
+      resetTurn();
+    }, 700);
+  }
+}
+
+function resetTurn() {
+  first = second = null;
+  lock = false;
+}
+
+function win() {
+  clearInterval(interval);
+  statusText.textContent = "🎉 Completed!";
+
+  if (dailyMode) {
+    localStorage.setItem("daily-" + todayKey(), timer);
+    statusText.textContent = "🎉 Daily Challenge Completed!";
+    return;
+  }
+
+  let level = levelSelect.value;
+  let best = localStorage.getItem("best-" + level);
+  if (!best || timer < best) localStorage.setItem("best-" + level, timer);
+
+  if (level === "easy") levelSelect.options[1].disabled = false;
+  if (level === "medium") levelSelect.options[2].disabled = false;
+}
+</script>
+
+</body>
+</html>
+
